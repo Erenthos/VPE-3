@@ -34,7 +34,8 @@ export const authOptions = {
     signIn: "/auth/signin"
   },
 
-  session: { strategy: "jwt" },
+  // ⭐ FIX HERE
+  session: { strategy: "jwt" as const },
 
   callbacks: {
     async jwt({ token, user }) {
