@@ -1,17 +1,12 @@
-// ---------- Datasource (Neon PostgreSQL) ----------
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
 }
 
-// ---------- Generator ----------
 generator client {
   provider = "prisma-client-js"
 }
 
-// ---------- Models ----------
-
-// Users of the system (no roles)
 model User {
   id        String   @id @default(cuid())
   name      String?
@@ -21,7 +16,6 @@ model User {
   ratings   Rating[]
 }
 
-// Vendors that users can rate
 model Vendor {
   id        String   @id @default(cuid())
   name      String
@@ -31,7 +25,6 @@ model Vendor {
   ratings   Rating[]
 }
 
-// Segments like: Quality, Delivery, Communication
 model Segment {
   id        String     @id @default(cuid())
   name      String
@@ -39,15 +32,15 @@ model Segment {
   questions Question[]
 }
 
-// Each segment contains questions
 model Question {
-  id        String   @id @default(cuid())
+  id        String    @id @default(cuid())
   text      String
-  segment   Segment  @relation(fields: [segmentId], references: [id])
+  segment   Segment   @relation(fields: [segmentId], references: [id])
   segmentId String
+
+  ratings   Rating[]  // ⭐ FIXED — Back relation
 }
 
-// Stores rating + comment per user per vendor per question
 model Rating {
   id         String    @id @default(cuid())
   user       User      @relation(fields: [userId], references: [id])
@@ -56,10 +49,10 @@ model Rating {
   vendorId   String
   question   Question  @relation(fields: [questionId], references: [id])
   questionId String
+
   score      Int       @default(0)
   comment    String?   @default("")
   updatedAt  DateTime  @updatedAt
 
   @@unique([userId, vendorId, questionId], name: "unique_rating_entry")
 }
-
