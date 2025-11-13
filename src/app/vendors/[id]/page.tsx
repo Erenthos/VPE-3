@@ -34,6 +34,39 @@ export default function VendorRatingPage() {
   const [ratings, setRatings] = useState<Record<string, RatingRecord>>({});
   const [loading, setLoading] = useState(true);
 
+  // ⭐ PDF Download Function
+  async function downloadPDF() {
+    try {
+      const res = await fetch("/api/pdf", {
+        method: "POST",
+        body: JSON.stringify({ vendorId }),
+        headers: {
+          "Content-Type": "application/json"
+        }
+      });
+
+      if (!res.ok) {
+        alert("Failed to generate PDF");
+        return;
+      }
+
+      const blob = await res.blob();
+      const url = window.URL.createObjectURL(blob);
+
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `Vendor_Report_${vendor?.name || "Report"}.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+
+      window.URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error("PDF download error:", error);
+      alert("Failed to download PDF");
+    }
+  }
+
   // Load vendor details
   async function loadVendor() {
     const res = await fetch(`/api/vendors/${vendorId}`);
@@ -109,6 +142,19 @@ export default function VendorRatingPage() {
 
       <div className="relative z-10 max-w-5xl mx-auto px-6 py-16">
 
+        {/* PDF Button */}
+        <motion.button
+          onClick={downloadPDF}
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6 }}
+          className="mb-8 px-6 py-3 rounded-2xl bg-gradient-to-r from-purple-500 to-blue-500 
+                     hover:from-purple-600 hover:to-blue-600 text-white font-semibold 
+                     shadow-xl hover:shadow-purple-500/30 transition-all duration-300"
+        >
+          📄 Download PDF Report
+        </motion.button>
+
         {/* Vendor Header */}
         <motion.div
           initial={{ opacity: 0, y: 15 }}
@@ -179,4 +225,3 @@ export default function VendorRatingPage() {
     </div>
   );
 }
-
