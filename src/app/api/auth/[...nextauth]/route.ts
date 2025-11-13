@@ -1,17 +1,19 @@
 import NextAuth from "next-auth";
-import Credentials from "next-auth/providers/credentials";
+import CredentialsProvider from "next-auth/providers/credentials";
 import { authenticateUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 
-const authOptions = {
+export const authOptions = {
   providers: [
-    Credentials({
+    CredentialsProvider({
       name: "Credentials",
+
       credentials: {
         email: { label: "Email", type: "email" },
         password: { label: "Password", type: "password" }
       },
-      async authorize(credentials) {
+
+      async authorize(credentials: any) {
         if (!credentials?.email || !credentials?.password) return null;
 
         const user = await authenticateUser(
@@ -38,9 +40,12 @@ const authOptions = {
 
   callbacks: {
     async jwt({ token, user }) {
-      if (user) token.id = user.id;
+      if (user) {
+        token.id = user.id;
+      }
       return token;
     },
+
     async session({ session, token }) {
       session.user.id = token.id;
       return session;
@@ -48,6 +53,6 @@ const authOptions = {
   }
 };
 
+// Required App Router export format
 const handler = NextAuth(authOptions);
-
 export { handler as GET, handler as POST };
