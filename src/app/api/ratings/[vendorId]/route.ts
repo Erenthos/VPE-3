@@ -1,32 +1,29 @@
-import { prisma } from "@/lib/prisma";
 import { NextResponse } from "next/server";
+import { prisma } from "@/lib/prisma";
 import { getServerSession } from "next-auth/next";
+import { authOptions } from "@/lib/authOptions";
 
-// GET → load all ratings of current user for this vendor
 export async function GET(
   req: Request,
   { params }: { params: { vendorId: string } }
 ) {
+  const session = await getServerSession(authOptions);
+  if (!session?.user?.id) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  const { vendorId } = params;
+
   try {
-    const session: any = await getServerSession();
-
-    if (!session?.user?.id) {
-      return NextResponse.json(
-        { error: "Unauthorized" },
-        { status: 401 }
-      );
-    }
-
     const ratings = await prisma.rating.findMany({
       where: {
-        userId: session.user.id,
-        vendorId: params.vendorId
+        vendorId,
+        userId: session.user.id
       }
     });
 
     return NextResponse.json(ratings);
   } catch (error) {
-    console.error("Error loading ratings:", error);
     return NextResponse.json(
       { error: "Failed to load ratings" },
       { status: 500 }
@@ -34,37 +31,23 @@ export async function GET(
   }
 }
 
-// POST → create/update rating (auto-save)
 export async function POST(
   req: Request,
   { params }: { params: { vendorId: string } }
 ) {
+  const session = await getServerSession(authOptions);
+  if (!session?.user?.id) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  const { vendorId } = params;
+  const { questionId, score, comment } = await req.json();
+
   try {
-    const session: any = await getServerSession();
-
-    if (!session?.user?.id) {
-      return NextResponse.json(
-        { error: "Unauthorized" },
-        { status: 401 }
-      );
-    }
-
-    const userId = session.user.id;
-    const vendorId = params.vendorId;
-    const { questionId, score, comment } = await req.json();
-
-    if (!questionId) {
-      return NextResponse.json(
-        { error: "questionId is required" },
-        { status: 400 }
-      );
-    }
-
-    // Upsert ensures: 1 rating per user per vendor per question
-    const rating = await prisma.rating.upsert({
+    const updatedRating = await prisma.rating.upsert({
       where: {
         userId_vendorId_questionId: {
-          userId,
+          userId: session.user.id,
           vendorId,
           questionId
         }
@@ -74,7 +57,7 @@ export async function POST(
         comment
       },
       create: {
-        userId,
+        userId: session.user.id,
         vendorId,
         questionId,
         score,
@@ -82,13 +65,12 @@ export async function POST(
       }
     });
 
-    return NextResponse.json(rating);
+    return NextResponse.json(updatedRating);
   } catch (error) {
-    console.error("Error saving rating:", error);
+    console.error("Rating update error:", error);
     return NextResponse.json(
-      { error: "Failed to save rating" },
+      { error: "Failed to update rating" },
       { status: 500 }
     );
   }
 }
-
