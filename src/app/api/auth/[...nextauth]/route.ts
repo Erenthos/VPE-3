@@ -1,6 +1,6 @@
 import NextAuth from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
-import { authenticateUser } from "@/src/lib/auth";
+import { authenticateUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { NextResponse } from "next/server";
 
