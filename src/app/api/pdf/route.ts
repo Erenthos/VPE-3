@@ -1,11 +1,13 @@
-import { prisma } from "@/lib/prisma";
 import { NextResponse } from "next/server";
 import PDFDocument from "pdfkit";
+import { prisma } from "@/lib/prisma";
 import { getServerSession } from "next-auth/next";
+import { authOptions } from "@/lib/authOptions";
 
 export async function POST(req: Request) {
   try {
-    const session: any = await getServerSession();
+    const session = await getServerSession(authOptions);
+
     if (!session?.user?.id) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
@@ -15,10 +17,11 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "vendorId is required" }, { status: 400 });
     }
 
-    // Fetch vendor
+    // Vendor info
     const vendor = await prisma.vendor.findUnique({
       where: { id: vendorId }
     });
+
     if (!vendor) {
       return NextResponse.json({ error: "Vendor not found" }, { status: 404 });
     }
@@ -29,7 +32,7 @@ export async function POST(req: Request) {
       orderBy: { name: "asc" }
     });
 
-    // Ratings for this vendor by this user
+    // Ratings by the logged-in user for this vendor
     const ratings = await prisma.rating.findMany({
       where: {
         vendorId,
@@ -40,7 +43,8 @@ export async function POST(req: Request) {
     // Create PDF
     const doc = new PDFDocument({ margin: 50 });
     const chunks: Buffer[] = [];
-    doc.on("data", (c) => chunks.push(c));
+
+    doc.on("data", (chunk) => chunks.push(chunk));
     doc.on("end", () => {});
 
     // Title
@@ -50,7 +54,7 @@ export async function POST(req: Request) {
       .text("Vendor Performance Report", { align: "center" })
       .moveDown(1.5);
 
-    // Vendor Info
+    // Vendor details
     doc
       .fontSize(14)
       .fillColor("black")
@@ -59,7 +63,7 @@ export async function POST(req: Request) {
       .text(`Email: ${vendor.email || "N/A"}`)
       .moveDown(1);
 
-    // Ratings Section
+    // Ratings
     doc.fontSize(18).text("Performance Ratings", { underline: true });
     doc.moveDown(1);
 
@@ -110,4 +114,3 @@ export async function POST(req: Request) {
     );
   }
 }
-
