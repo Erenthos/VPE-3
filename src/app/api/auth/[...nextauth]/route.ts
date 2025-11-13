@@ -1,31 +1,19 @@
 import NextAuth from "next-auth";
-import CredentialsProvider from "next-auth/providers/credentials";
+import Credentials from "next-auth/providers/credentials";
 import { authenticateUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { NextResponse } from "next/server";
 
-const handler = NextAuth({
-  session: {
-    strategy: "jwt"
-  },
-
-  pages: {
-    signIn: "/auth/signin"
-  },
-
+const authOptions = {
   providers: [
-    CredentialsProvider({
+    Credentials({
       name: "Credentials",
-
       credentials: {
         email: { label: "Email", type: "email" },
         password: { label: "Password", type: "password" }
       },
-
-      async authorize(credentials: any) {
+      async authorize(credentials) {
         if (!credentials?.email || !credentials?.password) return null;
 
-        // Use our authentication helper from lib/auth.ts
         const user = await authenticateUser(
           credentials.email,
           credentials.password
@@ -42,22 +30,24 @@ const handler = NextAuth({
     })
   ],
 
+  pages: {
+    signIn: "/auth/signin"
+  },
+
+  session: { strategy: "jwt" },
+
   callbacks: {
     async jwt({ token, user }) {
-      if (user) {
-        token.id = user.id;
-      }
+      if (user) token.id = user.id;
       return token;
     },
-
     async session({ session, token }) {
-      if (token) {
-        session.user.id = token.id;
-      }
+      session.user.id = token.id;
       return session;
     }
   }
-});
+};
+
+const handler = NextAuth(authOptions);
 
 export { handler as GET, handler as POST };
-
