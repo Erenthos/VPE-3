@@ -1,7 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { NextResponse } from "next/server";
 import PDFDocument from "pdfkit";
-import { getServerSession } from "next-auth";
+import { getServerSession } from "next-auth/next";
 
 export async function POST(req: Request) {
   try {
