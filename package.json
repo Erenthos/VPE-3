@@ -11,18 +11,19 @@
   "dependencies": {
     "@prisma/client": "latest",
     "bcryptjs": "2.4.3",
+    "framer-motion": "11.0.0",
     "next": "14.2.5",
     "next-auth": "5.0.0-beta.25",
+    "pdfkit": "0.15.0",
     "react": "18.2.0",
     "react-dom": "18.2.0",
     "zod": "3.23.8"
   },
   "devDependencies": {
+    "autoprefixer": "10.4.19",
+    "postcss": "8.4.31",
     "prisma": "latest",
     "tailwindcss": "3.4.3",
-    "postcss": "8.4.31",
-    "autoprefixer": "10.4.19",
     "typescript": "5.4.2"
   }
 }
-
