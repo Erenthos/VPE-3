@@ -8,22 +8,22 @@ export async function GET(
   { params }: { params: { vendorId: string } }
 ) {
   const session = await getServerSession(authOptions);
+
   if (!session?.user?.id) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const { vendorId } = params;
-
   try {
     const ratings = await prisma.rating.findMany({
       where: {
-        vendorId,
+        vendorId: params.vendorId,
         userId: session.user.id
       }
     });
 
     return NextResponse.json(ratings);
   } catch (error) {
+    console.error("GET ratings error:", error);
     return NextResponse.json(
       { error: "Failed to load ratings" },
       { status: 500 }
@@ -36,6 +36,7 @@ export async function POST(
   { params }: { params: { vendorId: string } }
 ) {
   const session = await getServerSession(authOptions);
+
   if (!session?.user?.id) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
@@ -46,7 +47,7 @@ export async function POST(
   try {
     const updatedRating = await prisma.rating.upsert({
       where: {
-        userId_vendorId_questionId: {
+        unique_rating_entry: {
           userId: session.user.id,
           vendorId,
           questionId
@@ -67,7 +68,7 @@ export async function POST(
 
     return NextResponse.json(updatedRating);
   } catch (error) {
-    console.error("Rating update error:", error);
+    console.error("POST ratings error:", error);
     return NextResponse.json(
       { error: "Failed to update rating" },
       { status: 500 }
