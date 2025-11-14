@@ -1,11 +1,7 @@
+export const dynamic = "force-dynamic";   // 🔥 REQUIRED for NextAuth + Prisma
+
 import "./globals.css";
 import { SessionProvider } from "next-auth/react";
-import type { Metadata } from "next";
-
-export const metadata: Metadata = {
-  title: "Vendor Performance Evaluator 3",
-  description: "COSMIC UI — Rate vendor performance with ease."
-};
 
 export default function RootLayout({
   children
@@ -20,4 +16,3 @@ export default function RootLayout({
     </html>
   );
 }
-
