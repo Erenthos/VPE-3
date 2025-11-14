@@ -1,17 +1,25 @@
-import { Page, Text, View, Document, StyleSheet } from "@react-pdf/renderer";
+import {
+  Page,
+  Text,
+  View,
+  Document,
+  StyleSheet
+} from "@react-pdf/renderer";
 
+// PDF Styles
 const styles = StyleSheet.create({
   page: {
     padding: 30,
     fontSize: 12
   },
-  section: {
-    marginBottom: 15
-  },
   title: {
     fontSize: 20,
     marginBottom: 20,
-    textAlign: "center"
+    textAlign: "center",
+    fontWeight: "bold"
+  },
+  section: {
+    marginBottom: 15
   },
   segment: {
     marginBottom: 10
@@ -19,10 +27,49 @@ const styles = StyleSheet.create({
   question: {
     marginLeft: 10,
     marginBottom: 5
+  },
+  summaryBox: {
+    marginTop: 20,
+    padding: 10,
+    borderWidth: 1,
+    borderColor: "#444",
+    borderRadius: 4
   }
 });
 
 export default function VendorReport({ vendor, segments, ratings }) {
+  // Compute weighted score
+  let totalWeight = 0;
+  let weightedSum = 0;
+
+  const segmentSummaries = segments.map((segment) => {
+    const segRatings = segment.questions.map((q) => {
+      const r = ratings.find((x) => x.questionId === q.id);
+      return r?.score ?? 0;
+    });
+
+    const avg =
+      segRatings.length > 0
+        ? segRatings.reduce((a, b) => a + b, 0) / segRatings.length
+        : 0;
+
+    const weighted = avg * segment.weight;
+
+    totalWeight += segment.weight;
+    weightedSum += weighted;
+
+    return {
+      id: segment.id,
+      name: segment.name,
+      avg,
+      weight: segment.weight,
+      weighted
+    };
+  });
+
+  const finalScore =
+    totalWeight > 0 ? weightedSum / totalWeight : 0;
+
   return (
     <Document>
       <Page style={styles.page}>
@@ -35,11 +82,25 @@ export default function VendorReport({ vendor, segments, ratings }) {
           <Text>Email: {vendor.email || "N/A"}</Text>
         </View>
 
-        {/* Ratings */}
-        <View>
+        {/* Summary */}
+        <View style={styles.summaryBox}>
+          <Text style={{ fontSize: 14, fontWeight: "bold", marginBottom: 5 }}>
+            Final Weighted Score: {finalScore.toFixed(2)} / 10
+          </Text>
+
+          {segmentSummaries.map((s) => (
+            <Text key={s.id}>
+              {s.name}: Avg {s.avg.toFixed(2)} × Weight {s.weight} ={" "}
+              {s.weighted.toFixed(2)}
+            </Text>
+          ))}
+        </View>
+
+        {/* Segment Details */}
+        <View style={{ marginTop: 20 }}>
           {segments.map((seg) => (
             <View key={seg.id} style={styles.segment}>
-              <Text>
+              <Text style={{ fontSize: 15, marginBottom: 4 }}>
                 {seg.name} (Weight: {seg.weight})
               </Text>
 
