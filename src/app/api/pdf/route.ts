@@ -8,7 +8,7 @@ import { authOptions } from "@/lib/authOptions";
 import VendorReport from "@/pdf/VendorReport";
 import { renderToBuffer } from "@react-pdf/renderer";
 
-import React from "react"; // REQUIRED for createElement
+import React from "react";
 
 export async function POST(req: Request) {
   try {
@@ -26,25 +26,17 @@ export async function POST(req: Request) {
       );
     }
 
-    // Fetch vendor data
-    const vendor = await prisma.vendor.findUnique({
-      where: { id: vendorId }
-    });
+    const vendor = await prisma.vendor.findUnique({ where: { id: vendorId } });
 
     if (!vendor) {
-      return NextResponse.json(
-        { error: "Vendor not found" },
-        { status: 404 }
-      );
+      return NextResponse.json({ error: "Vendor not found" }, { status: 404 });
     }
 
-    // Fetch segments + questions
     const segments = await prisma.segment.findMany({
       include: { questions: true },
       orderBy: { name: "asc" }
     });
 
-    // Fetch ratings by logged-in user
     const ratings = await prisma.rating.findMany({
       where: {
         vendorId,
@@ -52,16 +44,17 @@ export async function POST(req: Request) {
       }
     });
 
-    // -----------------------------
-    // Generate PDF (NO JSX ALLOWED)
-    // -----------------------------
+    // Create PDF element (NO JSX allowed in API Routes)
     const pdfElement = React.createElement(VendorReport, {
       vendor,
       segments,
       ratings
     });
 
-    const pdfBuffer = await renderToBuffer(pdfElement);
+    // ⭐ FIXED — TypeScript-safe casting for Vercel builds
+    const pdfBuffer = await renderToBuffer(
+      pdfElement as unknown as React.ReactElement
+    );
 
     return new NextResponse(pdfBuffer, {
       status: 200,
