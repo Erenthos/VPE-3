@@ -12,12 +12,18 @@ import React from "react";
 
 export async function POST(req: Request) {
   try {
+    // -----------------------------
+    // AUTH CHECK
+    // -----------------------------
     const session = await getServerSession(authOptions);
 
     if (!session?.user?.id) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
+    // -----------------------------
+    // GET vendorId
+    // -----------------------------
     const { vendorId } = await req.json();
     if (!vendorId) {
       return NextResponse.json(
@@ -26,17 +32,31 @@ export async function POST(req: Request) {
       );
     }
 
-    const vendor = await prisma.vendor.findUnique({ where: { id: vendorId } });
+    // -----------------------------
+    // FETCH VENDOR
+    // -----------------------------
+    const vendor = await prisma.vendor.findUnique({
+      where: { id: vendorId }
+    });
 
     if (!vendor) {
-      return NextResponse.json({ error: "Vendor not found" }, { status: 404 });
+      return NextResponse.json(
+        { error: "Vendor not found" },
+        { status: 404 }
+      );
     }
 
+    // -----------------------------
+    // FETCH SEGMENTS + QUESTIONS
+    // -----------------------------
     const segments = await prisma.segment.findMany({
       include: { questions: true },
       orderBy: { name: "asc" }
     });
 
+    // -----------------------------
+    // FETCH RATINGS for this vendor + user
+    // -----------------------------
     const ratings = await prisma.rating.findMany({
       where: {
         vendorId,
@@ -44,18 +64,23 @@ export async function POST(req: Request) {
       }
     });
 
-    // Create PDF element (NO JSX allowed in API Routes)
+    // -----------------------------
+    // CREATE PDF ELEMENT (NO JSX)
+    // -----------------------------
     const pdfElement = React.createElement(VendorReport, {
       vendor,
       segments,
       ratings
     });
 
-    // ⭐ FIXED — TypeScript-safe casting for Vercel builds
+    // IMPORTANT — cast element to avoid TS error
     const pdfBuffer = await renderToBuffer(
       pdfElement as unknown as React.ReactElement
     );
 
+    // -----------------------------
+    // SEND PDF FILE
+    // -----------------------------
     return new NextResponse(pdfBuffer, {
       status: 200,
       headers: {
@@ -66,6 +91,7 @@ export async function POST(req: Request) {
 
   } catch (err) {
     console.error("PDF Generation Error:", err);
+
     return NextResponse.json(
       { error: "Failed to generate PDF" },
       { status: 500 }
