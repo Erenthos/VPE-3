@@ -3,6 +3,8 @@
 import { motion } from "framer-motion";
 import Link from "next/link";
 
+export const dynamic = "force-dynamic";
+
 export default function HomePage() {
   return (
     <div className="relative w-full h-screen overflow-hidden flex items-center justify-center text-white">
