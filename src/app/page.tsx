@@ -1,9 +1,10 @@
 "use client";
 
+export const dynamic = "force-dynamic";
+
+import React from "react";
 import { motion } from "framer-motion";
 import Link from "next/link";
-
-export const dynamic = "force-dynamic";
 
 export default function HomePage() {
   return (
@@ -17,22 +18,36 @@ export default function HomePage() {
 
       {/* --- Floating Cosmic Particles --- */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        {[...Array(40)].map((_, i) => (
-          <motion.div
-            key={i}
-            className="absolute w-1 h-1 bg-white rounded-full opacity-70"
-            initial={{ x: Math.random() * window.innerWidth, y: Math.random() * window.innerHeight }}
-            animate={{
-              y: "-10vh",
-              x: `+=${Math.random() * 40 - 20}`
-            }}
-            transition={{
-              duration: Math.random() * 4 + 4,
-              repeat: Infinity,
-              ease: "linear"
-            }}
-          />
-        ))}
+        {[...Array(40)].map((_, i) => {
+          const [pos, setPos] = React.useState({ x: 0, y: 0 });
+
+          // Generate random positions only on the client
+          React.useEffect(() => {
+            if (typeof window !== "undefined") {
+              setPos({
+                x: Math.random() * window.innerWidth,
+                y: Math.random() * window.innerHeight
+              });
+            }
+          }, []);
+
+          return (
+            <motion.div
+              key={i}
+              className="absolute w-1 h-1 bg-white rounded-full opacity-70"
+              initial={{ x: pos.x, y: pos.y }}
+              animate={{
+                y: "-10vh",
+                x: `+=${Math.random() * 40 - 20}`
+              }}
+              transition={{
+                duration: Math.random() * 4 + 4,
+                repeat: Infinity,
+                ease: "linear"
+              }}
+            />
+          );
+        })}
       </div>
 
       {/* --- Main Content --- */}
@@ -91,9 +106,9 @@ export default function HomePage() {
               Create Account
             </Link>
           </motion.div>
+
         </div>
       </motion.div>
     </div>
   );
 }
-
