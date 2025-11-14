@@ -1,3 +1,6 @@
+// 🚨 MUST FORCE NODE RUNTIME FOR PDFKIT ON VERCEL
+export const runtime = "nodejs";
+
 import { NextResponse } from "next/server";
 import PDFDocument from "pdfkit";
 import { prisma } from "@/lib/prisma";
@@ -32,7 +35,7 @@ export async function POST(req: Request) {
       orderBy: { name: "asc" }
     });
 
-    // Ratings by the logged-in user for this vendor
+    // Ratings by logged-in user for this vendor
     const ratings = await prisma.rating.findMany({
       where: {
         vendorId,
@@ -40,7 +43,9 @@ export async function POST(req: Request) {
       }
     });
 
-    // Create PDF
+    // ------------------------------
+    // PDF GENERATION (Node Only)
+    // ------------------------------
     const doc = new PDFDocument({ margin: 50 });
     const chunks: Buffer[] = [];
 
@@ -50,45 +55,34 @@ export async function POST(req: Request) {
     // Title
     doc
       .fontSize(22)
-      .fillColor("#222")
+      .fillColor("#000")
       .text("Vendor Performance Report", { align: "center" })
       .moveDown(1.5);
 
-    // Vendor details
+    // Vendor information
     doc
       .fontSize(14)
-      .fillColor("black")
+      .fillColor("#000")
       .text(`Vendor Name: ${vendor.name}`)
       .text(`Company: ${vendor.company || "N/A"}`)
       .text(`Email: ${vendor.email || "N/A"}`)
       .moveDown(1);
 
-    // Ratings
-    doc.fontSize(18).text("Performance Ratings", { underline: true });
+    doc.fontSize(18).text("Evaluation Summary", { underline: true });
     doc.moveDown(1);
 
+    // Loop through segments and questions
     segments.forEach((seg) => {
-      doc
-        .fontSize(16)
-        .fillColor("#222")
-        .text(`${seg.name} (Weight: ${seg.weight})`);
+      doc.fontSize(16).fillColor("#111").text(`${seg.name} (Weight: ${seg.weight})`);
       doc.moveDown(0.5);
 
       seg.questions.forEach((q) => {
         const r = ratings.find((x) => x.questionId === q.id);
 
-        doc
-          .fontSize(13)
-          .fillColor("black")
-          .text(`• ${q.text}`);
+        doc.fontSize(13).fillColor("#000").text(`• ${q.text}`);
 
-        doc.text(`   Rating: ${r?.score ?? 0}/10`);
-
-        if (r?.comment) {
-          doc.text(`   Comment: ${r.comment}`);
-        } else {
-          doc.text(`   Comment: -`);
-        }
+        doc.text(`   Rating: ${r?.score ?? 0} / 10`);
+        doc.text(`   Comment: ${r?.comment || "-"}`);
 
         doc.moveDown(0.7);
       });
@@ -97,6 +91,7 @@ export async function POST(req: Request) {
     });
 
     doc.end();
+
     const pdfBuffer = Buffer.concat(chunks);
 
     return new NextResponse(pdfBuffer, {
@@ -106,6 +101,7 @@ export async function POST(req: Request) {
         "Content-Disposition": `attachment; filename="Vendor_Report_${vendor.name}.pdf"`
       }
     });
+
   } catch (error) {
     console.error("PDF Generation Error:", error);
     return NextResponse.json(
