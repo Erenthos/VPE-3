@@ -1,4 +1,6 @@
-export const dynamic = "force-dynamic";   // 🔥 REQUIRED for NextAuth + Prisma
+"use client";
+
+export const dynamic = "force-dynamic";
 
 import "./globals.css";
 import { SessionProvider } from "next-auth/react";
