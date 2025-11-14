@@ -4,6 +4,8 @@ import { useSession } from "next-auth/react";
 import { motion } from "framer-motion";
 import Link from "next/link";
 
+export const dynamic = "force-dynamic";
+
 export default function DashboardPage() {
   const { data: session } = useSession();
 
