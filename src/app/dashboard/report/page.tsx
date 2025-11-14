@@ -9,120 +9,100 @@ type Vendor = {
   id: string;
   name: string;
   company?: string | null;
+  email?: string | null;
 };
 
-export default function ReportPage() {
+export default function DownloadReport() {
   const [vendors, setVendors] = useState<Vendor[]>([]);
-  const [selectedVendor, setSelectedVendor] = useState<string>("");
-  const [loadingVendors, setLoadingVendors] = useState(true);
-  const [downloading, setDownloading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [selectedVendorId, setSelectedVendorId] = useState("");
+
+  const [search, setSearch] = useState("");
 
   useEffect(() => {
-    async function load() {
-      setLoadingVendors(true);
-      try {
-        const res = await fetch("/api/vendors");
-        if (!res.ok) throw new Error("Failed to load vendors");
-        const data = await res.json();
-        setVendors(data);
-      } catch (err: any) {
-        setError(err?.message || "Failed to load vendors");
-      } finally {
-        setLoadingVendors(false);
-      }
+    async function loadVendors() {
+      const v = await fetch("/api/vendors").then((r) => r.json());
+      setVendors(v);
     }
-    load();
+    loadVendors();
   }, []);
 
+  const filteredVendors = vendors.filter((v) => {
+    const term = search.toLowerCase();
+    return (
+      v.name.toLowerCase().includes(term) ||
+      (v.company || "").toLowerCase().includes(term) ||
+      (v.email || "").toLowerCase().includes(term)
+    );
+  });
+
   async function handleDownload() {
-    if (!selectedVendor) {
-      setError("Please select a vendor");
+    if (!selectedVendorId) return;
+
+    const res = await fetch("/api/pdf", {
+      method: "POST",
+      body: JSON.stringify({ vendorId: selectedVendorId })
+    });
+
+    if (!res.ok) {
+      alert("Failed to generate PDF");
       return;
     }
-    setError(null);
-    setDownloading(true);
 
-    try {
-      const res = await fetch("/api/pdf", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ vendorId: selectedVendor })
-      });
+    const blob = await res.blob();
+    const url = window.URL.createObjectURL(blob);
 
-      if (!res.ok) {
-        const data = await res.json().catch(() => ({}));
-        throw new Error(data.error || "Failed to generate PDF");
-      }
-
-      const blob = await res.blob();
-      const vendor = vendors.find((v) => v.id === selectedVendor);
-      const safeName = (vendor?.name || "vendor").replace(/[^a-z0-9_\-]/gi, "_");
-      const filename = `Vendor_Report_${safeName}.pdf`;
-
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = filename;
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-      window.URL.revokeObjectURL(url);
-    } catch (err: any) {
-      console.error("Download error:", err);
-      setError(err?.message || "Failed to download PDF");
-    } finally {
-      setDownloading(false);
-    }
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "Vendor_Performance_Report.pdf";
+    a.click();
+    URL.revokeObjectURL(url);
   }
 
   return (
     <div className="relative w-full min-h-screen text-white">
-      {/* Background */}
+
       <div className="absolute inset-0 bg-gradient-to-b from-black via-[#0a0016] to-black" />
-      <div className="absolute w-[700px] h-[700px] rounded-full bg-purple-700/20 blur-[160px] -top-20 -left-40" />
-      <div className="absolute w-[600px] h-[600px] rounded-full bg-blue-600/20 blur-[160px] top-40 -right-40" />
+      <div className="absolute w-[700px] h-[700px] rounded-full bg-purple-700/20 blur-[160px] -top-20 -left-40"></div>
+      <div className="absolute w-[600px] h-[600px] rounded-full bg-blue-600/20 blur-[160px] top-40 -right-40"></div>
 
       <div className="relative z-10 max-w-3xl mx-auto px-6 py-20">
-        <motion.h1
-          initial={{ opacity: 0, y: 12 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6 }}
-          className="text-3xl font-bold mb-4"
+
+        <h1 className="text-4xl font-bold mb-10 text-center">
+          Download Vendor Report
+        </h1>
+
+        {/* SEARCH */}
+        <input
+          type="text"
+          placeholder="Search vendor…"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          className="w-full px-4 py-3 mb-4 rounded-xl bg-black/40 border border-white/10 text-white"
+        />
+
+        {/* VENDOR DROPDOWN */}
+        <select
+          value={selectedVendorId}
+          onChange={(e) => setSelectedVendorId(e.target.value)}
+          className="w-full px-4 py-3 rounded-xl bg-black/40 border border-white/10 text-white mb-6"
         >
-          Download Vendor Performance PDF
-        </motion.h1>
-        <p className="text-gray-400 mb-8">Generate a printable report with ratings and comments.</p>
+          <option value="">— Select vendor —</option>
+          {filteredVendors.map((v) => (
+            <option key={v.id} value={v.id}>
+              {v.name} {v.company ? `(${v.company})` : ""}
+            </option>
+          ))}
+        </select>
 
-        <div className="backdrop-blur-xl bg-white/5 border border-white/10 rounded-2xl p-6">
-          <label className="block text-sm text-gray-300 mb-2">Select Vendor</label>
-
-          <div className="flex gap-3 items-center">
-            <select
-              value={selectedVendor}
-              onChange={(e) => setSelectedVendor(e.target.value)}
-              className="flex-1 px-4 py-3 rounded-xl bg-black/40 border border-white/10 text-white"
-            >
-              <option value="">— Select vendor —</option>
-              {vendors.map((v) => (
-                <option key={v.id} value={v.id}>
-                  {v.name} {v.company ? `(${v.company})` : ""}
-                </option>
-              ))}
-            </select>
-
-            <button
-              onClick={handleDownload}
-              disabled={downloading || loadingVendors}
-              className="px-4 py-3 rounded-xl bg-gradient-to-r from-purple-500 to-blue-500 hover:from-purple-600 hover:to-blue-600 disabled:opacity-60"
-            >
-              {downloading ? "Generating..." : "Download PDF"}
-            </button>
-          </div>
-
-          {loadingVendors && <p className="text-gray-400 mt-4">Loading vendors...</p>}
-          {error && <p className="text-red-400 mt-4">{error}</p>}
-        </div>
+        <button
+          onClick={handleDownload}
+          disabled={!selectedVendorId}
+          className="w-full py-3 rounded-xl bg-gradient-to-r from-purple-500 to-blue-500 
+                     hover:from-purple-600 hover:to-blue-600 transition text-white font-medium
+                     disabled:opacity-40 shadow-lg"
+        >
+          Download PDF Report
+        </button>
       </div>
     </div>
   );
