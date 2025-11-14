@@ -6,7 +6,7 @@ import {
   StyleSheet
 } from "@react-pdf/renderer";
 
-// PDF Styles
+// Styles
 const styles = StyleSheet.create({
   page: {
     padding: 30,
@@ -22,27 +22,35 @@ const styles = StyleSheet.create({
     marginBottom: 15
   },
   segment: {
-    marginBottom: 10
+    marginBottom: 14
   },
   question: {
     marginLeft: 10,
-    marginBottom: 5
+    marginBottom: 4
   },
   summaryBox: {
     marginTop: 20,
-    padding: 10,
+    padding: 12,
     borderWidth: 1,
     borderColor: "#444",
     borderRadius: 4
   }
 });
 
+// Convert final score to label
+function getRatingLabel(score) {
+  if (score >= 9) return "Excellent";
+  if (score >= 7) return "Good";
+  if (score >= 5) return "Average";
+  return "Bad";
+}
+
 export default function VendorReport({ vendor, segments, ratings }) {
-  // Compute weighted score
   let totalWeight = 0;
   let weightedSum = 0;
 
-  const segmentSummaries = segments.map((segment) => {
+  // Compute weighted final score
+  segments.forEach((segment) => {
     const segRatings = segment.questions.map((q) => {
       const r = ratings.find((x) => x.questionId === q.id);
       return r?.score ?? 0;
@@ -53,26 +61,17 @@ export default function VendorReport({ vendor, segments, ratings }) {
         ? segRatings.reduce((a, b) => a + b, 0) / segRatings.length
         : 0;
 
-    const weighted = avg * segment.weight;
-
+    weightedSum += avg * segment.weight;
     totalWeight += segment.weight;
-    weightedSum += weighted;
-
-    return {
-      id: segment.id,
-      name: segment.name,
-      avg,
-      weight: segment.weight,
-      weighted
-    };
   });
 
-  const finalScore =
-    totalWeight > 0 ? weightedSum / totalWeight : 0;
+  const finalScore = totalWeight ? weightedSum / totalWeight : 0;
+  const ratingLabel = getRatingLabel(finalScore);
 
   return (
     <Document>
       <Page style={styles.page}>
+        {/* Title */}
         <Text style={styles.title}>Vendor Performance Evaluation Report</Text>
 
         {/* Vendor Info */}
@@ -82,25 +81,18 @@ export default function VendorReport({ vendor, segments, ratings }) {
           <Text>Email: {vendor.email || "N/A"}</Text>
         </View>
 
-        {/* Summary */}
+        {/* Final Score Summary */}
         <View style={styles.summaryBox}>
-          <Text style={{ fontSize: 14, fontWeight: "bold", marginBottom: 5 }}>
-            Final Weighted Score: {finalScore.toFixed(2)} / 10
+          <Text style={{ fontSize: 14, fontWeight: "bold", marginBottom: 4 }}>
+            Final Rating: {finalScore.toFixed(2)} / 10 — {ratingLabel}
           </Text>
-
-          {segmentSummaries.map((s) => (
-            <Text key={s.id}>
-              {s.name}: Avg {s.avg.toFixed(2)} × Weight {s.weight} ={" "}
-              {s.weighted.toFixed(2)}
-            </Text>
-          ))}
         </View>
 
         {/* Segment Details */}
         <View style={{ marginTop: 20 }}>
           {segments.map((seg) => (
             <View key={seg.id} style={styles.segment}>
-              <Text style={{ fontSize: 15, marginBottom: 4 }}>
+              <Text style={{ fontSize: 15, marginBottom: 6 }}>
                 {seg.name} (Weight: {seg.weight})
               </Text>
 
