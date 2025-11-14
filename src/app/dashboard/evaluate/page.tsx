@@ -36,10 +36,11 @@ export default function EvaluateVendors() {
 
   const [ratings, setRatings] = useState<Record<string, Rating>>({});
   const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
 
-  /** --------------------
-   *  INITIAL LOAD
-   *  --------------------*/
+  /* -----------------------------
+      INITIAL LOAD (vendors + segments)
+  ------------------------------*/
   useEffect(() => {
     async function load() {
       const v = await fetch("/api/vendors").then((r) => r.json());
@@ -51,9 +52,9 @@ export default function EvaluateVendors() {
     load();
   }, []);
 
-  /** --------------------
-   *  LOAD EXISTING RATINGS FOR A VENDOR
-   *  --------------------*/
+  /* -----------------------------
+      LOAD EXISTING RATINGS FOR A VENDOR
+  ------------------------------*/
   async function loadRatingsForVendor(vendorId: string) {
     setSelectedVendorId(vendorId);
 
@@ -73,9 +74,9 @@ export default function EvaluateVendors() {
     setRatings(formatted);
   }
 
-  /** --------------------
-   *  SAVE RATING (server)
-   *  --------------------*/
+  /* -----------------------------
+      SAVE A SINGLE RATING (auto-save)
+  ------------------------------*/
   async function saveRating(questionId: string, score: number, comment: string) {
     if (!selectedVendorId) return;
 
@@ -84,6 +85,34 @@ export default function EvaluateVendors() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ questionId, score, comment })
     });
+  }
+
+  /* -----------------------------
+      MANUAL SAVE BUTTON
+  ------------------------------*/
+  async function saveAll() {
+    if (!selectedVendorId) return;
+
+    setSaving(true);
+
+    try {
+      for (const qid in ratings) {
+        const r = ratings[qid];
+        await fetch(`/api/ratings/${selectedVendorId}`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            questionId: r.questionId,
+            score: r.score,
+            comment: r.comment
+          })
+        });
+      }
+
+      alert("Evaluation saved successfully!");
+    } finally {
+      setSaving(false);
+    }
   }
 
   if (loading) {
@@ -97,7 +126,7 @@ export default function EvaluateVendors() {
   return (
     <div className="relative w-full min-h-screen text-white">
 
-      {/* Background */}
+      {/* Cosmic Background */}
       <div className="absolute inset-0 bg-gradient-to-b from-black via-[#0a0016] to-black" />
       <div className="absolute w-[700px] h-[700px] rounded-full bg-purple-700/20 blur-[160px] -top-20 -left-40"></div>
       <div className="absolute w-[600px] h-[600px] rounded-full bg-blue-600/20 blur-[160px] top-40 -right-40"></div>
@@ -106,7 +135,7 @@ export default function EvaluateVendors() {
 
         <h1 className="text-4xl font-bold mb-10">Evaluate Vendors</h1>
 
-        {/* Vendor Select */}
+        {/* Vendor Selector */}
         <div className="mb-10">
           <label className="block mb-2 text-lg">Select Vendor</label>
 
@@ -127,15 +156,30 @@ export default function EvaluateVendors() {
           <p className="text-gray-400">Select a vendor to begin evaluation.</p>
         )}
 
-        {/* -------------------------------------------------- */}
-        {/*   SEGMENTS + QUESTIONS + SLIDERS + COMMENTS        */}
-        {/* -------------------------------------------------- */}
+        {/* SAVE BUTTON */}
+        {selectedVendorId && (
+          <div className="mb-10 flex justify-end">
+            <button
+              onClick={saveAll}
+              disabled={saving}
+              className="px-8 py-3 rounded-xl bg-gradient-to-r from-purple-500 to-blue-500 
+                         hover:from-purple-600 hover:to-blue-600 shadow-lg transition text-white font-medium
+                         disabled:opacity-50"
+            >
+              {saving ? "Saving..." : "Save Evaluation"}
+            </button>
+          </div>
+        )}
+
+        {/* --------------------------------------
+            SEGMENTS + QUESTIONS + SLIDERS
+        --------------------------------------- */}
         {selectedVendorId && (
           <div className="space-y-8">
             {segments.map((segment) => (
               <motion.div
                 key={segment.id}
-                initial={{ opacity: 0, y: 12 }}
+                initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.3 }}
                 className="backdrop-blur-xl bg-white/5 border border-white/10 p-6 rounded-3xl"
@@ -147,28 +191,32 @@ export default function EvaluateVendors() {
                   </span>
                 </h2>
 
-                <div className="space-y-6">
+                <div className="space-y-8">
+
                   {segment.questions.map((q) => {
-                    const current =
-                      ratings[q.id] ||
-                      ({ questionId: q.id, score: 0, comment: "" } as Rating);
+                    const current: Rating =
+                      ratings[q.id] || {
+                        questionId: q.id,
+                        score: 0,
+                        comment: ""
+                      };
 
                     return (
                       <div key={q.id} className="space-y-3">
                         <p className="text-lg">{q.text}</p>
 
-                        {/* -------------------- SLIDER -------------------- */}
+                        {/* Slider */}
                         <input
                           type="range"
                           min={0}
                           max={10}
                           value={current.score}
                           onChange={(e) => {
-                            const value = Number(e.target.value);
+                            const score = Number(e.target.value);
 
                             const newRating: Rating = {
                               questionId: q.id,
-                              score: value,
+                              score,
                               comment: current.comment
                             };
 
@@ -177,7 +225,7 @@ export default function EvaluateVendors() {
                               [q.id]: newRating
                             }));
 
-                            saveRating(q.id, value, current.comment);
+                            saveRating(q.id, score, current.comment);
                           }}
                           className="w-full"
                         />
@@ -186,17 +234,17 @@ export default function EvaluateVendors() {
                           Score: {current.score} / 10
                         </p>
 
-                        {/* -------------------- COMMENT -------------------- */}
+                        {/* Comment */}
                         <textarea
                           placeholder="Enter comment (optional)"
                           value={current.comment}
                           onChange={(e) => {
-                            const value = e.target.value;
+                            const comment = e.target.value;
 
                             const newRating: Rating = {
                               questionId: q.id,
                               score: current.score,
-                              comment: value
+                              comment
                             };
 
                             setRatings((prev) => ({
@@ -204,13 +252,14 @@ export default function EvaluateVendors() {
                               [q.id]: newRating
                             }));
 
-                            saveRating(q.id, current.score, value);
+                            saveRating(q.id, current.score, comment);
                           }}
                           className="w-full px-3 py-2 rounded-xl bg-black/40 border border-white/10 text-white"
                         />
                       </div>
                     );
                   })}
+
                 </div>
               </motion.div>
             ))}
