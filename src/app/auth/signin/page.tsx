@@ -6,6 +6,8 @@ import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import Link from "next/link";
 
+export const dynamic = "force-dynamic";
+
 export default function SignInPage() {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
