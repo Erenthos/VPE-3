@@ -4,6 +4,8 @@ import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import Link from "next/link";
 
+export const dynamic = "force-dynamic";
+
 type Vendor = {
   id: string;
   name: string;
