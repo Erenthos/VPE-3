@@ -9,6 +9,7 @@ type Vendor = {
   id: string;
   name: string;
   company?: string | null;
+  email?: string | null;
 };
 
 type Question = {
@@ -36,15 +37,17 @@ export default function EvaluateVendors() {
 
   const [ratings, setRatings] = useState<Record<string, Rating>>({});
   const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
 
-  /* -----------------------------
-      INITIAL LOAD (vendors + segments)
-  ------------------------------*/
+  const [search, setSearch] = useState("");
+
+  /* -----------------------------------
+      INITIAL LOAD
+  -------------------------------------*/
   useEffect(() => {
     async function load() {
       const v = await fetch("/api/vendors").then((r) => r.json());
       const s = await fetch("/api/segments").then((r) => r.json());
+
       setVendors(v);
       setSegments(s);
       setLoading(false);
@@ -52,9 +55,21 @@ export default function EvaluateVendors() {
     load();
   }, []);
 
-  /* -----------------------------
-      LOAD EXISTING RATINGS FOR A VENDOR
-  ------------------------------*/
+  /* -----------------------------------
+      FILTER VENDORS BY SEARCH
+  -------------------------------------*/
+  const filteredVendors = vendors.filter((v) => {
+    const term = search.toLowerCase();
+    return (
+      v.name.toLowerCase().includes(term) ||
+      (v.company || "").toLowerCase().includes(term) ||
+      (v.email || "").toLowerCase().includes(term)
+    );
+  });
+
+  /* -----------------------------------
+      LOAD RATINGS FOR SELECTED VENDOR
+  -------------------------------------*/
   async function loadRatingsForVendor(vendorId: string) {
     setSelectedVendorId(vendorId);
 
@@ -74,9 +89,9 @@ export default function EvaluateVendors() {
     setRatings(formatted);
   }
 
-  /* -----------------------------
-      SAVE A SINGLE RATING (auto-save)
-  ------------------------------*/
+  /* -----------------------------------
+      SAVE SINGLE RATING (AUTO-SAVE)
+  -------------------------------------*/
   async function saveRating(questionId: string, score: number, comment: string) {
     if (!selectedVendorId) return;
 
@@ -87,17 +102,18 @@ export default function EvaluateVendors() {
     });
   }
 
-  /* -----------------------------
-      MANUAL SAVE BUTTON
-  ------------------------------*/
-  async function saveAll() {
-    if (!selectedVendorId) return;
+  /* -----------------------------------
+      SAVE ALL RATINGS (MANUAL BUTTON)
+  -------------------------------------*/
+  const [saving, setSaving] = useState(false);
 
+  async function saveAll() {
     setSaving(true);
 
     try {
       for (const qid in ratings) {
         const r = ratings[qid];
+
         await fetch(`/api/ratings/${selectedVendorId}`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -118,14 +134,14 @@ export default function EvaluateVendors() {
   if (loading) {
     return (
       <div className="text-white p-10">
-        <p>Loading...</p>
+        <p>Loading…</p>
       </div>
     );
   }
 
   return (
     <div className="relative w-full min-h-screen text-white">
-
+      
       {/* Cosmic Background */}
       <div className="absolute inset-0 bg-gradient-to-b from-black via-[#0a0016] to-black" />
       <div className="absolute w-[700px] h-[700px] rounded-full bg-purple-700/20 blur-[160px] -top-20 -left-40"></div>
@@ -135,16 +151,23 @@ export default function EvaluateVendors() {
 
         <h1 className="text-4xl font-bold mb-10">Evaluate Vendors</h1>
 
-        {/* Vendor Selector */}
-        <div className="mb-10">
-          <label className="block mb-2 text-lg">Select Vendor</label>
+        {/* SEARCH BOX */}
+        <input
+          type="text"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          placeholder="Search vendor…"
+          className="w-full px-4 py-3 rounded-xl bg-black/40 border border-white/10 text-white mb-4"
+        />
 
+        {/* VENDOR DROPDOWN */}
+        <div className="mb-10">
           <select
             className="w-full px-4 py-3 rounded-xl bg-black/40 border border-white/10 text-white"
             onChange={(e) => loadRatingsForVendor(e.target.value)}
           >
             <option value="">— Select vendor —</option>
-            {vendors.map((v) => (
+            {filteredVendors.map((v) => (
               <option key={v.id} value={v.id}>
                 {v.name} {v.company ? `(${v.company})` : ""}
               </option>
@@ -152,6 +175,7 @@ export default function EvaluateVendors() {
           </select>
         </div>
 
+        {/* If no vendor selected */}
         {!selectedVendorId && (
           <p className="text-gray-400">Select a vendor to begin evaluation.</p>
         )}
@@ -163,17 +187,15 @@ export default function EvaluateVendors() {
               onClick={saveAll}
               disabled={saving}
               className="px-8 py-3 rounded-xl bg-gradient-to-r from-purple-500 to-blue-500 
-                         hover:from-purple-600 hover:to-blue-600 shadow-lg transition text-white font-medium
-                         disabled:opacity-50"
+              hover:from-purple-600 hover:to-blue-600 shadow-lg transition text-white font-medium
+              disabled:opacity-50"
             >
-              {saving ? "Saving..." : "Save Evaluation"}
+              {saving ? "Saving…" : "Save Evaluation"}
             </button>
           </div>
         )}
 
-        {/* --------------------------------------
-            SEGMENTS + QUESTIONS + SLIDERS
-        --------------------------------------- */}
+        {/* SEGMENTS + QUESTIONS */}
         {selectedVendorId && (
           <div className="space-y-8">
             {segments.map((segment) => (
