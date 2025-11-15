@@ -37,7 +37,7 @@ const styles = StyleSheet.create({
   }
 });
 
-// Convert final score to label
+// Converts final numeric score → text label
 function getRatingLabel(score) {
   if (score >= 9) return "Excellent";
   if (score >= 7) return "Good";
@@ -45,11 +45,16 @@ function getRatingLabel(score) {
   return "Bad";
 }
 
-export default function VendorReport({ vendor, segments, ratings }) {
+export default function VendorReport({
+  vendor,
+  segments,
+  ratings,
+  evaluatorName
+}) {
   let totalWeight = 0;
   let weightedSum = 0;
 
-  // Compute weighted final score
+  // Compute weighted score
   segments.forEach((segment) => {
     const segRatings = segment.questions.map((q) => {
       const r = ratings.find((x) => x.questionId === q.id);
@@ -79,6 +84,11 @@ export default function VendorReport({ vendor, segments, ratings }) {
           <Text>Vendor Name: {vendor.name}</Text>
           <Text>Company: {vendor.company || "N/A"}</Text>
           <Text>Email: {vendor.email || "N/A"}</Text>
+        </View>
+
+        {/* Evaluated By */}
+        <View style={styles.section}>
+          <Text>Evaluated By: {evaluatorName}</Text>
         </View>
 
         {/* Final Score Summary */}
