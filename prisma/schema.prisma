@@ -32,13 +32,15 @@ model Vendor {
   email     String?
   createdAt DateTime @default(now())
 
-  // New fields:
-  lastEvaluatedBy   User?     @relation(fields: [lastEvaluatedById], references: [id])
+  // Correct order: scalar field FIRST, then relation
   lastEvaluatedById String?
+  lastEvaluatedBy   User? @relation(fields: [lastEvaluatedById], references: [id])
+
   lastEvaluatedAt   DateTime?
 
   ratings   Rating[]
 }
+
 
 // -------------------------------------
 // SEGMENTS (each has multiple questions)
