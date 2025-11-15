@@ -38,26 +38,43 @@ const styles = StyleSheet.create({
 });
 
 // Converts numeric score -> label
-function getRatingLabel(score) {
+function getRatingLabel(score: number) {
   if (score >= 9) return "Excellent";
   if (score >= 7) return "Good";
   if (score >= 5) return "Average";
   return "Bad";
 }
 
+function formatDateString(dateArg: string | Date | null | undefined) {
+  if (!dateArg) return "N/A";
+  const d = typeof dateArg === "string" ? new Date(dateArg) : dateArg;
+  // en-IN style dd/mm/yyyy
+  const day = String(d.getDate()).padStart(2, "0");
+  const month = String(d.getMonth() + 1).padStart(2, "0");
+  const year = d.getFullYear();
+  return `${day}/${month}/${year}`;
+}
+
 export default function VendorReport({
   vendor,
   segments,
   ratings,
-  evaluatorName
+  evaluatorName,
+  evaluatedAt
+}: {
+  vendor: any;
+  segments: any[];
+  ratings: any[];
+  evaluatorName?: string;
+  evaluatedAt?: string | Date | null;
 }) {
   let totalWeight = 0;
   let weightedSum = 0;
 
-  // Compute weighted final score
+  // Compute weighted score
   segments.forEach((segment) => {
-    const segRatings = segment.questions.map((q) => {
-      const r = ratings.find((x) => x.questionId === q.id);
+    const segRatings = segment.questions.map((q: any) => {
+      const r = ratings.find((x: any) => x.questionId === q.id);
       return r?.score ?? 0;
     });
 
@@ -73,12 +90,7 @@ export default function VendorReport({
   const finalScore = totalWeight ? weightedSum / totalWeight : 0;
   const ratingLabel = getRatingLabel(finalScore);
 
-  // Format evaluation timestamp
-  const evaluatedOn = new Date().toLocaleDateString("en-IN", {
-    day: "2-digit",
-    month: "2-digit",
-    year: "numeric"
-  });
+  const evaluatedOnStr = evaluatedAt ? formatDateString(evaluatedAt) : "N/A";
 
   return (
     <Document>
@@ -93,10 +105,10 @@ export default function VendorReport({
           <Text>Email: {vendor.email || "N/A"}</Text>
         </View>
 
-        {/* Evaluator Info */}
+        {/* Evaluated By + On */}
         <View style={styles.section}>
-          <Text>Evaluated By: {evaluatorName}</Text>
-          <Text>Evaluated On: {evaluatedOn}</Text>
+          <Text>Evaluated By: {evaluatorName || "Unknown"}</Text>
+          <Text>Evaluated On: {evaluatedOnStr}</Text>
         </View>
 
         {/* Final Score Summary */}
@@ -114,8 +126,8 @@ export default function VendorReport({
                 {seg.name} (Weight: {seg.weight})
               </Text>
 
-              {seg.questions.map((q) => {
-                const r = ratings.find((x) => x.questionId === q.id);
+              {seg.questions.map((q: any) => {
+                const r = ratings.find((x: any) => x.questionId === q.id);
 
                 return (
                   <View key={q.id} style={styles.question}>
