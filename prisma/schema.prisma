@@ -32,7 +32,12 @@ model Vendor {
   email     String?
   createdAt DateTime @default(now())
 
-  ratings   Rating[]    // all ratings for this vendor
+  // New fields:
+  lastEvaluatedBy   User?     @relation(fields: [lastEvaluatedById], references: [id])
+  lastEvaluatedById String?
+  lastEvaluatedAt   DateTime?
+
+  ratings   Rating[]
 }
 
 // -------------------------------------
