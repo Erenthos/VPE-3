@@ -23,7 +23,7 @@ export async function POST(
   { params }: { params: { vendorId: string } }
 ) {
   const session = await getServerSession(authOptions);
-  if (!session) {
+  if (!session?.user?.id) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
@@ -34,6 +34,7 @@ export async function POST(
     return NextResponse.json({ error: "questionId required" }, { status: 400 });
   }
 
+  // Upsert the rating (unique by vendorId + questionId)
   const updated = await prisma.rating.upsert({
     where: {
       vendorId_questionId: {
@@ -50,6 +51,15 @@ export async function POST(
       questionId,
       score,
       comment
+    }
+  });
+
+  // Update vendor to record who saved this evaluation and when
+  await prisma.vendor.update({
+    where: { id: vendorId },
+    data: {
+      lastEvaluatedById: session.user.id,
+      lastEvaluatedAt: new Date()
     }
   });
 
