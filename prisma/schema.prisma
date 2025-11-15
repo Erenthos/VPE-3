@@ -73,9 +73,8 @@ model Rating {
 
   score      Int       @default(0)
   comment    String?   @default("")
-
   updatedAt  DateTime  @updatedAt
 
-  // Unique rating per vendor per question
-  @@unique([vendorId, questionId], name: "unique_vendor_question")
+  @@unique([vendorId, questionId])
 }
+
