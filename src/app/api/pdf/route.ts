@@ -11,12 +11,20 @@ import React from "react";
 
 export async function POST(req: Request) {
   try {
-    // Auth check
+    // -----------------------------
+    // AUTH CHECK
+    // -----------------------------
     const session = await getServerSession(authOptions);
     if (!session) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
+    const evaluatorName =
+      session.user?.name || session.user?.email || "Unknown User";
+
+    // -----------------------------
+    // EXTRACT vendorId
+    // -----------------------------
     const { vendorId } = await req.json();
     if (!vendorId) {
       return NextResponse.json(
@@ -25,7 +33,9 @@ export async function POST(req: Request) {
       );
     }
 
-    // Fetch vendor
+    // -----------------------------
+    // FETCH VENDOR
+    // -----------------------------
     const vendor = await prisma.vendor.findUnique({
       where: { id: vendorId }
     });
@@ -37,29 +47,41 @@ export async function POST(req: Request) {
       );
     }
 
-    // Fetch segments + questions
+    // -----------------------------
+    // FETCH SEGMENTS + QUESTIONS
+    // -----------------------------
     const segments = await prisma.segment.findMany({
       include: { questions: true },
       orderBy: { name: "asc" }
     });
 
-    // Fetch GLOBAL ratings (no userId)
+    // -----------------------------
+    // FETCH GLOBAL RATINGS
+    // -----------------------------
     const ratings = await prisma.rating.findMany({
       where: { vendorId }
     });
 
-    // Create PDF component (NO JSX)
+    // -----------------------------
+    // CREATE PDF COMPONENT
+    // -----------------------------
     const pdfElement = React.createElement(VendorReport, {
       vendor,
       segments,
-      ratings
+      ratings,
+      evaluatorName
     });
 
-    // Render PDF buffer
+    // -----------------------------
+    // RENDER PDF BUFFER
+    // -----------------------------
     const pdfBuffer = await renderToBuffer(
       pdfElement as unknown as React.ReactElement
     );
 
+    // -----------------------------
+    // RETURN PDF FILE
+    // -----------------------------
     return new NextResponse(pdfBuffer, {
       status: 200,
       headers: {
@@ -67,6 +89,7 @@ export async function POST(req: Request) {
         "Content-Disposition": `attachment; filename="Vendor_Report_${vendor.name}.pdf"`
       }
     });
+
   } catch (err) {
     console.error("PDF Generation Error:", err);
     return NextResponse.json(
