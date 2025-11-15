@@ -1,6 +1,6 @@
-// -----------------------------
+// --------------------------------------------------------
 // DATABASE CONFIG
-// -----------------------------
+// --------------------------------------------------------
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
@@ -10,21 +10,25 @@ generator client {
   provider = "prisma-client-js"
 }
 
-// -----------------------------
+// --------------------------------------------------------
 // MODELS
-// -----------------------------
+// --------------------------------------------------------
 
+// USERS
 model User {
   id        String   @id @default(cuid())
   name      String?
   email     String   @unique
   password  String
   createdAt DateTime @default(now())
+
+  // Back relation: Users who evaluated vendors
+  evaluatedVendors Vendor[] @relation("VendorEvaluatedBy")
 }
 
-// -------------------------------------
+// --------------------------------------------------------
 // VENDOR MASTER
-// -------------------------------------
+// --------------------------------------------------------
 model Vendor {
   id        String   @id @default(cuid())
   name      String
@@ -32,19 +36,18 @@ model Vendor {
   email     String?
   createdAt DateTime @default(now())
 
-  // Correct order: scalar field FIRST, then relation
+  // Evaluated by user (FK must come before relation)
   lastEvaluatedById String?
-  lastEvaluatedBy   User? @relation(fields: [lastEvaluatedById], references: [id])
+  lastEvaluatedBy   User? @relation("VendorEvaluatedBy", fields: [lastEvaluatedById], references: [id])
 
   lastEvaluatedAt   DateTime?
 
   ratings   Rating[]
 }
 
-
-// -------------------------------------
-// SEGMENTS (each has multiple questions)
-// -------------------------------------
+// --------------------------------------------------------
+// SEGMENTS
+// --------------------------------------------------------
 model Segment {
   id        String     @id @default(cuid())
   name      String
@@ -53,9 +56,9 @@ model Segment {
   questions Question[]
 }
 
-// -------------------------------------
-// QUESTIONS (each belongs to a segment)
-// -------------------------------------
+// --------------------------------------------------------
+// QUESTIONS
+// --------------------------------------------------------
 model Question {
   id        String    @id @default(cuid())
   text      String
@@ -63,25 +66,25 @@ model Question {
   segment   Segment   @relation(fields: [segmentId], references: [id])
   segmentId String
 
-  ratings   Rating[]  // back relation
+  ratings   Rating[]
 }
 
-// -------------------------------------
-// GLOBAL RATINGS (shared among users)
-// -------------------------------------
+// --------------------------------------------------------
+// RATINGS (GLOBAL — shared for all users)
+// --------------------------------------------------------
 model Rating {
   id         String    @id @default(cuid())
 
-  vendor     Vendor    @relation(fields: [vendorId], references: [id])
   vendorId   String
+  vendor     Vendor    @relation(fields: [vendorId], references: [id])
 
-  question   Question  @relation(fields: [questionId], references: [id])
   questionId String
+  question   Question  @relation(fields: [questionId], references: [id])
 
   score      Int       @default(0)
   comment    String?   @default("")
   updatedAt  DateTime  @updatedAt
 
+  // One rating per vendor per question
   @@unique([vendorId, questionId])
 }
-
